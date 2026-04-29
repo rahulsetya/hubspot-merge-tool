@@ -158,8 +158,7 @@ export default function DashboardPage() {
               <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
                 Multiple HubSpot companies share the{" "}
                 <strong>same Platform CompanyID</strong>. Our integrations can
-                only sync one company per ID — every collision breaks downstream
-                tooling silently.
+                only sync one company per ID.
               </p>
             </div>
           </div>
