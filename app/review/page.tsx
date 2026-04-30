@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   GitMerge,
   Users,
   Activity,
@@ -189,6 +191,9 @@ function TabButton({
   );
 }
 
+type SortKey = "default" | "confidence" | "conflicts" | "activities" | "records";
+type SortDir = "asc" | "desc";
+
 function GroupTable({
   groups,
   completedGroupIds,
@@ -198,45 +203,188 @@ function GroupTable({
   completedGroupIds: Set<string>;
   tab: Tab;
 }) {
+  const [sortKey, setSortKey] = useState<SortKey>("default");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+
+  // Decorate every group with computed metrics for sorting/filtering.
+  const decorated = useMemo(
+    () =>
+      groups.map((g) => {
+        const signals = getMatchSignals(g);
+        const score = confidenceScore(signals);
+        const conflicts = conflictCount(g.companies);
+        const combined = combinedAssociations(g.companies);
+        const owners = Array.from(
+          new Set(
+            g.companies
+              .map((c) => c.properties.company_owner)
+              .filter((v): v is string => !!v)
+          )
+        );
+        return { group: g, signals, score, conflicts, combined, owners };
+      }),
+    [groups]
+  );
+
+  // Owner pool for the filter dropdown.
+  const ownerOptions = useMemo(() => {
+    const set = new Set<string>();
+    decorated.forEach((d) => d.owners.forEach((o) => set.add(o)));
+    return Array.from(set).sort();
+  }, [decorated]);
+
+  // Apply filter, then sort.
+  const visible = useMemo(() => {
+    let rows = decorated;
+    if (ownerFilter !== "all") {
+      rows = rows.filter((d) => d.owners.includes(ownerFilter));
+    }
+    if (sortKey !== "default") {
+      const dirMul = sortDir === "asc" ? 1 : -1;
+      const sorted = [...rows].sort((a, b) => {
+        let av = 0;
+        let bv = 0;
+        if (sortKey === "confidence") {
+          av = a.score;
+          bv = b.score;
+        } else if (sortKey === "conflicts") {
+          av = a.conflicts;
+          bv = b.conflicts;
+        } else if (sortKey === "activities") {
+          av = a.combined.activities;
+          bv = b.combined.activities;
+        } else if (sortKey === "records") {
+          av = a.group.companies.length;
+          bv = b.group.companies.length;
+        }
+        return (av - bv) * dirMul;
+      });
+      rows = sorted;
+    }
+    return rows;
+  }, [decorated, ownerFilter, sortKey, sortDir]);
+
+  const onSort = (key: SortKey) => {
+    if (key === sortKey) {
+      // Toggle direction; cycle to default after asc.
+      if (sortDir === "desc") setSortDir("asc");
+      else {
+        setSortKey("default");
+        setSortDir("desc");
+      }
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  };
+
+  const sortIndicator = (key: SortKey) => {
+    if (sortKey !== key)
+      return <ChevronDown className="h-3 w-3 text-slate-300" />;
+    return sortDir === "desc" ? (
+      <ChevronDown className="h-3 w-3 text-[var(--brand)]" />
+    ) : (
+      <ChevronUp className="h-3 w-3 text-[var(--brand)]" />
+    );
+  };
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr>
-            <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider w-10">
-              #
-            </th>
-            <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-              Company
-            </th>
-            <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-              {tab === "platform" ? "Platform CompanyID" : "Match"}
-            </th>
-            <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-              Confidence
-            </th>
-            <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-              Records
-            </th>
-            <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-              Conflicts
-            </th>
-            <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-              Activities
-            </th>
-            <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-              Status
-            </th>
-            <th className="px-5 py-3 w-10"></th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {groups.map((group, idx) => {
-            const conflicts = conflictCount(group.companies);
-            const combined = combinedAssociations(group.companies);
+    <>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            Filter by owner
+          </label>
+          <select
+            value={ownerFilter}
+            onChange={(e) => setOwnerFilter(e.target.value)}
+            className="text-sm bg-white border border-slate-300 rounded-md px-2.5 py-1.5 hover:border-slate-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-orange-100"
+          >
+            <option value="all">All owners</option>
+            {ownerOptions.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+          {(ownerFilter !== "all" || sortKey !== "default") && (
+            <button
+              onClick={() => {
+                setOwnerFilter("all");
+                setSortKey("default");
+                setSortDir("desc");
+              }}
+              className="text-xs text-slate-600 hover:text-slate-900 underline underline-offset-2"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+        <div className="text-xs text-slate-500 tabular-nums">
+          Showing {visible.length} of {decorated.length} group
+          {decorated.length === 1 ? "" : "s"}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider w-10">
+                #
+              </th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                Company
+              </th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                {tab === "platform" ? "Platform CompanyID" : "Match"}
+              </th>
+              <SortableHeader
+                label="Confidence"
+                active={sortKey === "confidence"}
+                indicator={sortIndicator("confidence")}
+                onClick={() => onSort("confidence")}
+              />
+              <SortableHeader
+                label="Records"
+                active={sortKey === "records"}
+                indicator={sortIndicator("records")}
+                onClick={() => onSort("records")}
+              />
+              <SortableHeader
+                label="Conflicts"
+                active={sortKey === "conflicts"}
+                indicator={sortIndicator("conflicts")}
+                onClick={() => onSort("conflicts")}
+              />
+              <SortableHeader
+                label="Activities"
+                active={sortKey === "activities"}
+                indicator={sortIndicator("activities")}
+                onClick={() => onSort("activities")}
+              />
+              <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-5 py-3 w-10"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {visible.length === 0 && (
+              <tr>
+                <td
+                  colSpan={9}
+                  className="px-5 py-12 text-center text-sm text-slate-500"
+                >
+                  No groups match the current filter.
+                </td>
+              </tr>
+            )}
+            {visible.map(
+              ({ group, signals, score, conflicts, combined }, idx) => {
             const isDone = completedGroupIds.has(group.id);
-            const signals = getMatchSignals(group);
-            const score = confidenceScore(signals);
             const tone = confidenceLabel(score);
             return (
               <tr
@@ -329,10 +477,39 @@ function GroupTable({
                 </td>
               </tr>
             );
-          })}
-        </tbody>
-      </table>
-    </div>
+              }
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function SortableHeader({
+  label,
+  active,
+  indicator,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  indicator: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+      <button
+        type="button"
+        onClick={onClick}
+        className={`inline-flex items-center gap-1 hover:text-slate-900 ${
+          active ? "text-[var(--brand-dark)]" : ""
+        }`}
+      >
+        {label}
+        {indicator}
+      </button>
+    </th>
   );
 }
 
