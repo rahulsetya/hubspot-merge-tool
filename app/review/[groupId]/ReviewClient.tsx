@@ -21,6 +21,13 @@ import {
   LifeBuoy,
   Sparkles,
   X,
+  Globe,
+  MapPin,
+  Phone,
+  Type,
+  IdCard,
+  UserCheck,
+  ShieldCheck,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import {
@@ -36,6 +43,11 @@ import {
   hasConflict,
   recommendedPrimaryId,
 } from "@/lib/diff";
+import {
+  getMatchSignals,
+  confidenceScore,
+  confidenceLabel,
+} from "@/lib/match-signals";
 import { LifecycleBadge } from "@/components/LifecycleBadge";
 import { ActivityPopover } from "@/components/ActivityPopover";
 import {
@@ -227,6 +239,8 @@ export function ReviewClient({ groupId }: { groupId: string }) {
           </div>
         </div>
       </div>
+
+      <MatchSignalsPanel group={group} />
 
       {isDone && completedEntry ? (
         <CompletedView
@@ -1001,6 +1015,101 @@ function ConfirmModal({
             Confirm merge
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Match signals panel ----------
+
+const SIGNAL_ICON: Record<string, React.ElementType> = {
+  "platform-id": IdCard,
+  domain: Globe,
+  address: MapPin,
+  phone: Phone,
+  "name-similarity": Type,
+  "ir-contact": UserCheck,
+  "company-owner": Users,
+};
+
+function MatchSignalsPanel({ group }: { group: MergeGroup }) {
+  const signals = useMemo(() => getMatchSignals(group), [group]);
+  const score = useMemo(() => confidenceScore(signals), [signals]);
+  const tone = confidenceLabel(score);
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4 overflow-hidden">
+      <div className="px-5 py-3 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <ShieldCheck className="h-4 w-4 text-slate-500 shrink-0" />
+          <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            Why these are flagged as duplicates
+          </span>
+          <span className="text-[11px] text-slate-400 truncate">
+            · {signals.length} signal{signals.length === 1 ? "" : "s"} matched
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[11px] text-slate-500 uppercase tracking-wider">
+            Confidence
+          </span>
+          <span
+            className={`inline-flex items-center text-xs font-bold tabular-nums px-2 py-0.5 rounded ring-1 ${tone.color}`}
+          >
+            {(score * 100).toFixed(0)}% · {tone.label}
+          </span>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-2 px-5 py-4">
+        {signals.length === 0 ? (
+          <div className="col-span-full text-xs text-slate-500 italic">
+            No detection signals matched.
+          </div>
+        ) : (
+          signals.map((s) => {
+            const Icon = SIGNAL_ICON[s.type] ?? ShieldCheck;
+            const strong = s.confidence >= 0.85;
+            const medium = s.confidence >= 0.5 && s.confidence < 0.85;
+            const tint = strong
+              ? "text-emerald-700 bg-emerald-50 ring-emerald-200"
+              : medium
+              ? "text-amber-700 bg-amber-50 ring-amber-200"
+              : "text-slate-600 bg-slate-50 ring-slate-200";
+            return (
+              <div
+                key={s.type + s.label}
+                className="flex items-start gap-2.5 py-1"
+              >
+                <span
+                  className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ring-1 ${tint}`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium text-slate-900 truncate">
+                      {s.label}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold tabular-nums px-1 py-0.5 rounded ${
+                        strong
+                          ? "text-emerald-700"
+                          : medium
+                          ? "text-amber-700"
+                          : "text-slate-500"
+                      }`}
+                    >
+                      {(s.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate">
+                    {s.detail}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

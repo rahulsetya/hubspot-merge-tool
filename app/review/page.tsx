@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { combinedAssociations, conflictCount } from "@/lib/diff";
+import {
+  confidenceLabel,
+  confidenceScore,
+  getMatchSignals,
+} from "@/lib/match-signals";
 import type { MergeGroup } from "@/lib/types";
 
 type Tab = "platform" | "name";
@@ -208,6 +213,9 @@ function GroupTable({
               {tab === "platform" ? "Platform CompanyID" : "Match"}
             </th>
             <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              Confidence
+            </th>
+            <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
               Records
             </th>
             <th className="text-center px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -227,6 +235,9 @@ function GroupTable({
             const conflicts = conflictCount(group.companies);
             const combined = combinedAssociations(group.companies);
             const isDone = completedGroupIds.has(group.id);
+            const signals = getMatchSignals(group);
+            const score = confidenceScore(signals);
+            const tone = confidenceLabel(score);
             return (
               <tr
                 key={group.id}
@@ -257,6 +268,19 @@ function GroupTable({
                   ) : (
                     <NameMatchSummary group={group} />
                   )}
+                </td>
+                <td className="px-5 py-4 text-center">
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-bold tabular-nums px-2 py-0.5 rounded ring-1 ${tone.color}`}
+                    title={`${signals.length} signal${
+                      signals.length === 1 ? "" : "s"
+                    } matched`}
+                  >
+                    {(score * 100).toFixed(0)}%
+                  </span>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    {signals.length} signal{signals.length === 1 ? "" : "s"}
+                  </div>
                 </td>
                 <td className="px-5 py-4 text-center">
                   <span className="inline-flex items-center gap-1 text-sm text-slate-700">

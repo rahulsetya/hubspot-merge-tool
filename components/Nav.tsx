@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, GitMerge, History, RotateCcw } from "lucide-react";
+import {
+  LayoutDashboard,
+  GitMerge,
+  History,
+  RotateCcw,
+  Radar,
+} from "lucide-react";
 import { useStore } from "@/lib/store";
 
 const ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/review", label: "Review queue", icon: GitMerge },
+  { href: "/detection", label: "Detection", icon: Radar },
   { href: "/audit", label: "Audit log", icon: History },
 ];
 

@@ -12,6 +12,8 @@ import {
   ZapOff,
   Search,
   Plug,
+  Radar,
+  Bell,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import {
@@ -265,6 +267,42 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Detection health */}
+      <Link
+        href="/detection"
+        className="block bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 mb-6 group transition-colors"
+      >
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+            <Radar className="h-5 w-5 text-slate-700" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Detection
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                <CheckCircle2 className="h-3 w-3" />
+                Healthy
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 ring-1 ring-rose-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                <Bell className="h-3 w-3" />
+                +2 today
+              </span>
+            </div>
+            <div className="text-sm text-slate-700 mt-0.5">
+              Last scan{" "}
+              <span className="font-medium text-slate-900">6h ago</span> · 6 of
+              6 rules active · Slack alerts on{" "}
+              <code className="text-[11px] bg-slate-100 px-1 py-0.5 rounded font-mono">
+                #data-quality
+              </code>
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all" />
+        </div>
+      </Link>
 
       {/* Tooling impact callout */}
       <div className="bg-slate-900 text-slate-100 rounded-xl p-5 mb-8 flex items-start gap-4">
