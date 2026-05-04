@@ -440,9 +440,9 @@ export default function DashboardPage() {
       <div className="mt-6 flex items-start gap-2 text-xs text-slate-500">
         <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
         <p>
-          Demo prototype with hypothetical data. Property schema mirrors the
-          real Clear Street company fields. Numbers in the portal snapshot above
-          reflect actual portal scale.
+          Demo prototype with hypothetical data. Property schema mirrors a
+          generic CRM company-record shape. All companies, contacts, owners,
+          and figures shown are fabricated for demo purposes.
         </p>
       </div>
     </div>

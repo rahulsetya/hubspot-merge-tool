@@ -719,7 +719,7 @@ function renderPropertyValue(
   }
   if (
     key === "mfa_member" ||
-    key === "clear_street_partnership" ||
+    key === "northwind_partnership" ||
     key === "tax_efficient" ||
     key === "onboarding_complete"
   ) {

@@ -30,19 +30,21 @@ export type MixedActivity = ActivitySample & {
 };
 
 const FIRST_NAMES = [
-  "Sarah", "Michael", "Jennifer", "David", "Emily", "Chris", "Rachel",
-  "Daniel", "Anna", "James", "Olivia", "Robert", "Sophie", "Marcus",
-  "Priya", "Henry", "Daniela", "Tomas", "Aisha", "Jordan", "Sasha",
-  "Nina", "Tyler", "Kayla", "Linda", "Brian", "Maya", "Andrew",
-  "Aaron", "Beth", "Carlos", "Diane", "Eli", "Farah", "Greg",
+  "Quinn", "Avery", "Sage", "Morgan", "Riley", "Taylor", "Casey",
+  "Logan", "Jamie", "Drew", "Skylar", "Reese", "Phoenix", "Rowan",
+  "Kai", "Devon", "Harper", "Cameron", "Charlie", "Emerson",
+  "Finley", "Hayden", "Indigo", "Justice", "Marlow", "Oakley",
+  "Parker", "Reagan", "Sutton", "Tatum", "Wren", "Adair",
+  "Blake", "Codie", "Ellis",
 ];
 
 const LAST_NAMES = [
-  "Chen", "Patel", "Rodriguez", "Müller", "Goldberg", "Park",
-  "Levin", "Nakamura", "O'Connor", "Brooks", "Walsh", "Hartman",
-  "Wilson", "Bennett", "Harper", "Reyes", "Khan", "Sullivan",
-  "Greene", "Foster", "Whitfield", "Cohen", "Maddox", "Romano",
-  "Sandoval", "Hassan", "Erikson", "Caldwell",
+  "Stoneford", "Lakemoor", "Brookworth", "Hartwell", "Hollowby",
+  "Whitford", "Thackeray", "Mendelin", "Vespermont", "Pemberford",
+  "Ashbridge", "Cliffway", "Easton", "Fairview", "Glenleaf",
+  "Hartmoor", "Inglewood", "Jensby", "Kingfair", "Lockmere",
+  "Maybrook", "Norwell", "Oakshore", "Pinegrove", "Rowanvale",
+  "Stallworth", "Thornedge", "Underwick",
 ];
 
 const TITLES = [

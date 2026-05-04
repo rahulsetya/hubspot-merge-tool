@@ -114,7 +114,7 @@ export const PROPERTY_LABELS: Record<keyof CompanyProperties, string> = {
   relationship_tier_am: "Relationship tier (AM)",
   tax_efficient: "Tax efficient",
   mfa_member: "MFA member",
-  clear_street_partnership: "Clear Street partnership",
+  northwind_partnership: "Northwind partnership",
   createdate: "Created",
   hs_lastmodifieddate: "Last modified",
 };
@@ -150,7 +150,7 @@ export const COMPARED_PROPERTIES: (keyof CompanyProperties)[] = [
   "relationship_tier_am",
   "tax_efficient",
   "mfa_member",
-  "clear_street_partnership",
+  "northwind_partnership",
   "createdate",
   "hs_lastmodifieddate",
 ];

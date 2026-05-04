@@ -299,11 +299,11 @@ export default function DetectionPage() {
                     </div>
                     <ul className="mt-1.5 text-xs text-slate-600 space-y-0.5">
                       <li>
-                        • <strong>Larkspur Capital Group</strong> · 2 records ·
+                        • <strong>Quartzlake Capital Group</strong> · 2 records ·
                         sync-breaking
                       </li>
                       <li>
-                        • <strong>Crestwood Capital</strong> · 2 records ·
+                        • <strong>Glassbrook Capital</strong> · 2 records ·
                         sync-breaking
                       </li>
                     </ul>

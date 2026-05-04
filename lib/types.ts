@@ -40,7 +40,7 @@ export type CompanyProperties = {
   relationship_tier_am: string;
   tax_efficient: string;
   mfa_member: "Yes" | "No" | "";
-  clear_street_partnership: "Yes" | "No" | "";
+  northwind_partnership: "Yes" | "No" | "";
   createdate: string;
   hs_lastmodifieddate: string;
 };
