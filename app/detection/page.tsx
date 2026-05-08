@@ -17,6 +17,7 @@ import {
   Users,
   Zap,
   Database,
+  GitBranch,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import {
@@ -24,6 +25,7 @@ import {
   confidenceScore,
   getMatchSignals,
 } from "@/lib/match-signals";
+import { sourceBreakdown } from "@/lib/sources";
 
 type Rule = {
   type:
@@ -369,6 +371,9 @@ export default function DetectionPage() {
         </div>
       </div>
 
+      {/* Source attribution */}
+      <SourceAttribution />
+
       {/* CTA */}
       <div className="mt-6 flex items-center justify-between bg-slate-900 text-slate-100 rounded-xl p-5">
         <div className="flex items-center gap-3">
@@ -393,6 +398,95 @@ export default function DetectionPage() {
           Open review queue
           <ArrowRight className="h-4 w-4" />
         </Link>
+      </div>
+    </div>
+  );
+}
+
+function SourceAttribution() {
+  const buckets = sourceBreakdown();
+  const total = buckets.reduce((s, b) => s + b.companies, 0);
+  const max = Math.max(1, ...buckets.map((b) => b.companies));
+  return (
+    <div className="mt-6 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <GitBranch className="h-4 w-4 text-slate-500" />
+          <h2 className="font-semibold text-slate-900">
+            Where do duplicates come from?
+          </h2>
+        </div>
+        <span className="text-[11px] text-slate-500">
+          {total} duplicate records across {buckets.length} sources
+        </span>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3">
+        {/* Bar chart */}
+        <div className="lg:col-span-2 p-5 border-b lg:border-b-0 lg:border-r border-slate-100">
+          <ul className="space-y-3">
+            {buckets.map((b) => {
+              const widthPct = (b.companies / max) * 100;
+              return (
+                <li key={b.source.id}>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ring-1 ${b.source.tone}`}
+                      >
+                        {b.source.label}
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-900 tabular-nums shrink-0">
+                      {b.companies}{" "}
+                      <span className="text-slate-400 font-normal">
+                        records · {b.groups} groups
+                      </span>
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${b.source.bar}`}
+                      style={{ width: `${widthPct}%` }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
+                    {b.source.description}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        {/* Top offender callout */}
+        <div className="p-5 bg-slate-50 flex flex-col">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+            Top offender
+          </div>
+          {buckets[0] && (
+            <>
+              <div className="text-lg font-semibold text-slate-900 leading-tight">
+                {buckets[0].source.label}
+              </div>
+              <div className="mt-1 text-sm text-slate-600">
+                {buckets[0].percentOfDuplicates.toFixed(0)}% of all duplicate
+                records originated here.
+              </div>
+              <div className="mt-4 text-xs text-slate-600 leading-relaxed">
+                Fixing the upstream pipe is higher leverage than cleaning each
+                duplicate individually. Consider tightening de-dupe checks at
+                the form / sync entry point.
+              </div>
+              <div className="mt-auto pt-4 text-[11px] text-slate-500">
+                Attribution is computed from a deterministic tag on each
+                record — for the demo only. Production would read it from a
+                <code className="mx-1 text-[10px] bg-white px-1 py-0.5 rounded font-mono ring-1 ring-slate-200">
+                  hs_analytics_source
+                </code>
+                style property.
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

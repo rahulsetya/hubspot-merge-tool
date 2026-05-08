@@ -9,15 +9,19 @@ import {
   RotateCcw,
   Radar,
   Trophy,
+  Heart,
+  Bot,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 
 const ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/review", label: "Review queue", icon: GitMerge },
+  { href: "/health", label: "Portal health", icon: Heart },
   { href: "/detection", label: "Detection", icon: Radar },
-  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { href: "/review", label: "Review queue", icon: GitMerge },
+  { href: "/policies", label: "Auto-merge", icon: Bot },
   { href: "/audit", label: "Audit log", icon: History },
+  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];
 
 export function Nav() {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -13,14 +13,27 @@ import {
   Briefcase,
   Users,
   LifeBuoy,
+  TrendingUp,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { formatDateTime } from "@/lib/format";
 import { LifecycleBadge } from "@/components/LifecycleBadge";
+import { weeklyMergeHistory } from "@/lib/merge-history";
 
 export default function AuditPage() {
   const { audit, groups, loaded } = useStore();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const history = useMemo(() => weeklyMergeHistory(audit), [audit]);
+  const total90d = useMemo(
+    () => history.reduce((s, b) => s + b.total, 0),
+    [history]
+  );
+  const sevenDayDelta = useMemo(() => {
+    if (history.length < 2) return 0;
+    return (
+      history[history.length - 1].total - history[history.length - 2].total
+    );
+  }, [history]);
 
   const toggle = (id: string) => {
     setExpanded((prev) => {
@@ -107,6 +120,47 @@ export default function AuditPage() {
           />
         </div>
       )}
+
+      {/* Merges per week — last 90 days */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-900">
+              Merges per week
+            </h2>
+            <span className="text-[11px] text-slate-500">last 90 days</span>
+          </div>
+          <div className="flex items-center gap-4 text-xs">
+            <span className="text-slate-700">
+              <span className="font-semibold tabular-nums">{total90d}</span>{" "}
+              merges total
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 font-medium ${
+                sevenDayDelta >= 0 ? "text-emerald-700" : "text-rose-700"
+              }`}
+            >
+              {sevenDayDelta >= 0 ? "▲" : "▼"} {Math.abs(sevenDayDelta)} wk/wk
+            </span>
+          </div>
+        </div>
+        <MergeTrendChart history={history} />
+        <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-wider">
+          <span>13w ago</span>
+          <span>This week</span>
+        </div>
+        <div className="mt-3 flex items-center gap-4 text-[10px] text-slate-500">
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-sm bg-slate-300" />
+            Historical
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-sm bg-[var(--brand)]" />
+            This session
+          </span>
+        </div>
+      </div>
 
       {!loaded ? (
         <div className="bg-white rounded-xl border border-slate-200 p-8 text-sm text-slate-500">
@@ -264,6 +318,42 @@ export default function AuditPage() {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function MergeTrendChart({
+  history,
+}: {
+  history: ReturnType<typeof weeklyMergeHistory>;
+}) {
+  const max = Math.max(1, ...history.map((b) => b.total));
+  return (
+    <div className="flex items-end gap-1.5 h-32">
+      {history.map((b) => {
+        const totalH = (b.total / max) * 100;
+        const liveH = (b.liveSession / max) * 100;
+        return (
+          <div
+            key={b.weeksAgo}
+            className="flex-1 flex flex-col justify-end items-center group relative"
+            title={`${b.weeksAgo === 0 ? "This week" : `${b.weeksAgo}w ago`}: ${b.total} merges`}
+          >
+            <div className="w-full relative" style={{ height: `${totalH}%` }}>
+              <div
+                className="absolute inset-x-0 bottom-0 bg-slate-300 rounded-t-sm group-hover:bg-slate-400 transition-colors"
+                style={{ height: "100%" }}
+              />
+              {b.liveSession > 0 && (
+                <div
+                  className="absolute inset-x-0 bottom-0 bg-[var(--brand)] rounded-t-sm"
+                  style={{ height: `${(liveH / totalH) * 100}%` }}
+                />
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
