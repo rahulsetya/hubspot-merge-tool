@@ -125,7 +125,15 @@ export default function LeaderboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {top3.map((entry, i) => {
           const merges = entry[periodKey] as number;
-          return <PodiumCard key={entry.id} entry={entry} place={i + 1} merges={merges} />;
+          const place = (i + 1) as 1 | 2 | 3;
+          return (
+            <PodiumCard
+              key={entry.id}
+              entry={entry}
+              place={place}
+              merges={merges}
+            />
+          );
         })}
       </div>
 
