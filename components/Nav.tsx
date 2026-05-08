@@ -8,6 +8,7 @@ import {
   History,
   RotateCcw,
   Radar,
+  Trophy,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 
@@ -15,6 +16,7 @@ const ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/review", label: "Review queue", icon: GitMerge },
   { href: "/detection", label: "Detection", icon: Radar },
+  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/audit", label: "Audit log", icon: History },
 ];
 
