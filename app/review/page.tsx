@@ -206,6 +206,7 @@ function GroupTable({
   const [sortKey, setSortKey] = useState<SortKey>("default");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const [csmFilter, setCsmFilter] = useState<string>("all");
 
   // Decorate every group with computed metrics for sorting/filtering.
   const decorated = useMemo(
@@ -222,7 +223,14 @@ function GroupTable({
               .filter((v): v is string => !!v)
           )
         );
-        return { group: g, signals, score, conflicts, combined, owners };
+        const csms = Array.from(
+          new Set(
+            g.companies
+              .map((c) => c.properties.client_success_manager)
+              .filter((v): v is string => !!v)
+          )
+        );
+        return { group: g, signals, score, conflicts, combined, owners, csms };
       }),
     [groups]
   );
@@ -234,11 +242,21 @@ function GroupTable({
     return Array.from(set).sort();
   }, [decorated]);
 
+  // CSM pool for the filter dropdown.
+  const csmOptions = useMemo(() => {
+    const set = new Set<string>();
+    decorated.forEach((d) => d.csms.forEach((c) => set.add(c)));
+    return Array.from(set).sort();
+  }, [decorated]);
+
   // Apply filter, then sort.
   const visible = useMemo(() => {
     let rows = decorated;
     if (ownerFilter !== "all") {
       rows = rows.filter((d) => d.owners.includes(ownerFilter));
+    }
+    if (csmFilter !== "all") {
+      rows = rows.filter((d) => d.csms.includes(csmFilter));
     }
     if (sortKey !== "default") {
       const dirMul = sortDir === "asc" ? 1 : -1;
@@ -263,7 +281,7 @@ function GroupTable({
       rows = sorted;
     }
     return rows;
-  }, [decorated, ownerFilter, sortKey, sortDir]);
+  }, [decorated, ownerFilter, csmFilter, sortKey, sortDir]);
 
   const onSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -293,26 +311,48 @@ function GroupTable({
     <>
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            Filter by owner
-          </label>
-          <select
-            value={ownerFilter}
-            onChange={(e) => setOwnerFilter(e.target.value)}
-            className="text-sm bg-white border border-slate-300 rounded-md px-2.5 py-1.5 hover:border-slate-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-orange-100"
-          >
-            <option value="all">All owners</option>
-            {ownerOptions.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-          {(ownerFilter !== "all" || sortKey !== "default") && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Filter by owner
+            </label>
+            <select
+              value={ownerFilter}
+              onChange={(e) => setOwnerFilter(e.target.value)}
+              className="text-sm bg-white border border-slate-300 rounded-md px-2.5 py-1.5 hover:border-slate-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-orange-100"
+            >
+              <option value="all">All owners</option>
+              {ownerOptions.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Filter by CSM
+            </label>
+            <select
+              value={csmFilter}
+              onChange={(e) => setCsmFilter(e.target.value)}
+              className="text-sm bg-white border border-slate-300 rounded-md px-2.5 py-1.5 hover:border-slate-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-orange-100"
+            >
+              <option value="all">All CSMs</option>
+              {csmOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          {(ownerFilter !== "all" ||
+            csmFilter !== "all" ||
+            sortKey !== "default") && (
             <button
               onClick={() => {
                 setOwnerFilter("all");
+                setCsmFilter("all");
                 setSortKey("default");
                 setSortDir("desc");
               }}
