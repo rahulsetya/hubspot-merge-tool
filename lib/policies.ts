@@ -22,7 +22,7 @@ export type AutoMergePolicy = {
 };
 
 export const DEFAULT_POLICY: AutoMergePolicy = {
-  minConfidence: 70,
+  minConfidence: 85,
   requirePlatformId: true,
   requireDomain: false,
   requireAddress: false,

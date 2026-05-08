@@ -182,6 +182,891 @@ function makeSamples(
   };
 }
 
+// ---- Compact builder used by extended platform-id groups below ----
+
+type CompanyOverrides = Partial<
+  Omit<MergeGroup["companies"][number]["properties"], "platform_company_id">
+>;
+
+type CompanySpec = {
+  id: string;
+  name: string;
+  owner: string;
+  csm?: string;
+  ir?: string;
+  aum: number;
+  url: string;
+  addr: string;
+  addr2?: string;
+  city: string;
+  state: string;
+  postal: string;
+  country?: string;
+  created: string;
+  modified: string;
+  assoc: {
+    contacts: number;
+    deals: number;
+    tickets: number;
+    activities: number;
+    notes: number;
+    emails: number;
+    calls: number;
+    meetings: number;
+    tasks: number;
+  };
+  sampleSeed: number;
+  firmShort: string;
+  /** Anything else you want to override on properties. */
+  extra?: CompanyOverrides;
+};
+
+function mkCompany(platformId: string, s: CompanySpec) {
+  return {
+    id: s.id,
+    platformCompanyId: platformId,
+    properties: {
+      name: s.name,
+      platform_company_id: platformId,
+      category: "Asset Manager",
+      subscription_end_date: "",
+      company_owner: s.owner,
+      lifecyclestage: "customer" as const,
+      renewal_status: "",
+      auto_renew_status: "",
+      account_segment: "Enterprise",
+      client_success_manager: s.csm ?? "",
+      onboarding_complete: "" as const,
+      ir_contact_owner: s.ir ?? "No owner",
+      firm_aum: s.aum,
+      street_address: s.addr,
+      street_address_2: s.addr2 ?? "",
+      city: s.city,
+      state: s.state,
+      postal_code: s.postal,
+      country: s.country ?? "United States",
+      website_url: s.url,
+      primary_investment_strategy: "",
+      description: "",
+      portfolio_size: "Mid",
+      investor_category: "Institutional",
+      ownership_attributes: "Private",
+      social_focus: [] as string[],
+      onboarding_demo: "",
+      platform_engagement_tier: "Tier 2",
+      relationship_tier_am: "Tier 2",
+      tax_efficient: "",
+      mfa_member: "" as const,
+      northwind_partnership: "" as const,
+      createdate: s.created,
+      hs_lastmodifieddate: s.modified,
+      ...(s.extra ?? {}),
+    },
+    associations: s.assoc,
+    activitySamples: makeSamples(
+      s.sampleSeed,
+      s.owner,
+      s.firmShort,
+      {
+        emails: s.assoc.emails,
+        calls: s.assoc.calls,
+        meetings: s.assoc.meetings,
+        notes: s.assoc.notes,
+        tasks: s.assoc.tasks,
+      },
+      s.modified
+    ),
+  };
+}
+
+/**
+ * 8 additional platform-id groups designed to span the confidence spectrum
+ * around the default auto-merge threshold (85%). These give the policy
+ * preview meaningful content above and below the line so executives can
+ * see the trade-off as they slide the slider.
+ */
+function buildExtendedPlatformIdGroups(): MergeGroup[] {
+  // Helper for the cluster of "fairly clean" assoc shapes used here.
+  const a = (
+    contacts: number,
+    deals: number,
+    tickets: number,
+    activities: number
+  ) => ({
+    contacts,
+    deals,
+    tickets,
+    activities,
+    notes: Math.round(activities * 0.18),
+    emails: Math.round(activities * 0.5),
+    calls: Math.round(activities * 0.18),
+    meetings: Math.round(activities * 0.07),
+    tasks: Math.round(activities * 0.07),
+  });
+
+  const groups: MergeGroup[] = [
+    // 1. Brierwood Capital Partners — should land ~98% (all signals match)
+    {
+      id: "grp_ext_001",
+      matchType: "platform-id",
+      platformCompanyId: "60001",
+      displayName: "Brierwood Capital Partners",
+      companies: [
+        mkCompany("60001", {
+          id: "co_60011",
+          name: "Brierwood Capital Partners",
+          owner: "Quinn Hartwell",
+          csm: "Drew Lakemoor",
+          ir: "Quinn Hartwell",
+          aum: 38_000_000_000,
+          url: "https://brierwood-cap.com",
+          addr: "150 Front Street",
+          addr2: "Suite 2200",
+          city: "New York",
+          state: "NY",
+          postal: "10038",
+          created: "2022-02-14T10:00:00Z",
+          modified: "2026-04-25T11:30:00Z",
+          assoc: a(9, 3, 4, 132),
+          sampleSeed: 9001,
+          firmShort: "Brierwood",
+          extra: {
+            platform_engagement_tier: "Tier 1",
+            relationship_tier_am: "Tier 1",
+            northwind_partnership: "Yes",
+            onboarding_complete: "Yes",
+            renewal_status: "Renewed",
+            auto_renew_status: "On",
+            subscription_end_date: "2026-12-31T00:00:00Z",
+          },
+        }),
+        mkCompany("60001", {
+          id: "co_60012",
+          name: "Brierwood Capital",
+          owner: "Quinn Hartwell",
+          ir: "Quinn Hartwell",
+          aum: 38_000_000_000,
+          url: "https://brierwood-cap.com",
+          addr: "150 Front Street",
+          city: "New York",
+          state: "NY",
+          postal: "10038",
+          created: "2024-08-12T08:14:00Z",
+          modified: "2025-11-04T16:22:00Z",
+          assoc: a(2, 1, 0, 14),
+          sampleSeed: 9002,
+          firmShort: "Brierwood",
+        }),
+      ],
+    },
+    // 2. Coppervein Capital — ~93%
+    {
+      id: "grp_ext_002",
+      matchType: "platform-id",
+      platformCompanyId: "60002",
+      displayName: "Coppervein Capital",
+      companies: [
+        mkCompany("60002", {
+          id: "co_60021",
+          name: "Coppervein Capital Group",
+          owner: "Casey Brookworth",
+          csm: "Casey Brookworth",
+          ir: "Casey Brookworth",
+          aum: 62_000_000_000,
+          url: "https://coppervein-cap.com",
+          addr: "1 Coppervein Plaza",
+          city: "Boston",
+          state: "MA",
+          postal: "02110",
+          created: "2021-06-03T12:00:00Z",
+          modified: "2026-03-28T09:18:00Z",
+          assoc: a(13, 5, 3, 168),
+          sampleSeed: 9003,
+          firmShort: "Coppervein",
+          extra: {
+            platform_engagement_tier: "Tier 1",
+            relationship_tier_am: "Tier 1",
+            onboarding_complete: "Yes",
+            renewal_status: "Renewed",
+            auto_renew_status: "On",
+            subscription_end_date: "2026-09-30T00:00:00Z",
+            northwind_partnership: "Yes",
+          },
+        }),
+        mkCompany("60002", {
+          id: "co_60022",
+          name: "Coppervein Capital",
+          owner: "Casey Brookworth",
+          aum: 62_000_000_000,
+          url: "https://coppervein-cap.com",
+          addr: "1 Coppervein Plaza",
+          city: "Boston",
+          state: "MA",
+          postal: "02110",
+          created: "2024-01-10T15:30:00Z",
+          modified: "2025-09-22T10:11:00Z",
+          assoc: a(3, 1, 0, 22),
+          sampleSeed: 9004,
+          firmShort: "Coppervein",
+        }),
+      ],
+    },
+    // 3. Drakeswold Strategic — ~89%
+    {
+      id: "grp_ext_003",
+      matchType: "platform-id",
+      platformCompanyId: "60003",
+      displayName: "Drakeswold Strategic",
+      companies: [
+        mkCompany("60003", {
+          id: "co_60031",
+          name: "Drakeswold Strategic",
+          owner: "Drew Lakemoor",
+          csm: "Drew Lakemoor",
+          aum: 84_000_000_000,
+          url: "https://drakeswold.com",
+          addr: "200 Lake Pointe",
+          addr2: "Floor 18",
+          city: "Chicago",
+          state: "IL",
+          postal: "60606",
+          created: "2022-09-21T11:45:00Z",
+          modified: "2026-04-02T08:55:00Z",
+          assoc: a(11, 3, 5, 144),
+          sampleSeed: 9005,
+          firmShort: "Drakeswold",
+          extra: {
+            platform_engagement_tier: "Tier 1",
+            relationship_tier_am: "Tier 1",
+            onboarding_complete: "Yes",
+            renewal_status: "In renewal",
+            auto_renew_status: "On",
+            subscription_end_date: "2026-10-15T00:00:00Z",
+          },
+        }),
+        mkCompany("60003", {
+          id: "co_60032",
+          name: "Drakeswold Strategic Group",
+          owner: "Drew Lakemoor",
+          aum: 81_000_000_000,
+          url: "https://drakeswold.com",
+          addr: "201 Lake Pointe",
+          city: "Chicago",
+          state: "IL",
+          postal: "60606",
+          created: "2024-04-30T09:00:00Z",
+          modified: "2025-08-14T14:33:00Z",
+          assoc: a(2, 1, 0, 18),
+          sampleSeed: 9006,
+          firmShort: "Drakeswold",
+        }),
+      ],
+    },
+    // 4. Elderfield Investment — ~86%
+    {
+      id: "grp_ext_004",
+      matchType: "platform-id",
+      platformCompanyId: "60004",
+      displayName: "Elderfield Investment",
+      companies: [
+        mkCompany("60004", {
+          id: "co_60041",
+          name: "Elderfield Investment Partners",
+          owner: "Riley Whitford",
+          csm: "Riley Whitford",
+          ir: "Riley Whitford",
+          aum: 22_000_000_000,
+          url: "https://elderfield-inv.com",
+          addr: "75 Garden Street",
+          city: "Boston",
+          state: "MA",
+          postal: "02114",
+          created: "2023-01-18T10:22:00Z",
+          modified: "2026-04-16T13:10:00Z",
+          assoc: a(7, 2, 2, 96),
+          sampleSeed: 9007,
+          firmShort: "Elderfield",
+          extra: {
+            platform_engagement_tier: "Tier 2",
+            relationship_tier_am: "Tier 2",
+            onboarding_complete: "Yes",
+          },
+        }),
+        mkCompany("60004", {
+          id: "co_60042",
+          name: "Elderfield Investments",
+          owner: "Riley Whitford",
+          ir: "Riley Whitford",
+          aum: 22_000_000_000,
+          url: "https://elderfield-inv.com",
+          addr: "180 South Street",
+          city: "Boston",
+          state: "MA",
+          postal: "02111",
+          created: "2024-07-09T11:00:00Z",
+          modified: "2025-10-07T09:48:00Z",
+          assoc: a(2, 0, 0, 12),
+          sampleSeed: 9008,
+          firmShort: "Elderfield",
+        }),
+      ],
+    },
+    // 5. Foxbarrow Macro — ~83% (just below threshold)
+    {
+      id: "grp_ext_005",
+      matchType: "platform-id",
+      platformCompanyId: "60005",
+      displayName: "Foxbarrow Macro Partners",
+      companies: [
+        mkCompany("60005", {
+          id: "co_60051",
+          name: "Foxbarrow Macro Partners",
+          owner: "Sage Pemberford",
+          csm: "Sage Pemberford",
+          aum: 145_000_000_000,
+          url: "https://foxbarrow-macro.com",
+          addr: "44 Wellington Way",
+          city: "Greenwich",
+          state: "CT",
+          postal: "06830",
+          created: "2021-11-08T15:00:00Z",
+          modified: "2026-03-19T10:24:00Z",
+          assoc: a(10, 4, 3, 152),
+          sampleSeed: 9009,
+          firmShort: "Foxbarrow",
+          extra: {
+            platform_engagement_tier: "Tier 1",
+            relationship_tier_am: "Tier 1",
+            onboarding_complete: "Yes",
+            renewal_status: "Renewed",
+            auto_renew_status: "On",
+            subscription_end_date: "2027-01-31T00:00:00Z",
+            northwind_partnership: "Yes",
+          },
+        }),
+        mkCompany("60005", {
+          id: "co_60052",
+          name: "Foxbarrow Capital",
+          owner: "Sage Pemberford",
+          aum: 144_000_000_000,
+          url: "https://foxbarrow-macro.com",
+          addr: "44 Wellington",
+          city: "Greenwich",
+          state: "CT",
+          postal: "06830",
+          created: "2024-02-26T13:30:00Z",
+          modified: "2025-12-11T11:09:00Z",
+          assoc: a(4, 1, 1, 28),
+          sampleSeed: 9010,
+          firmShort: "Foxbarrow",
+        }),
+      ],
+    },
+    // 6. Garlanville Quant — ~78%
+    {
+      id: "grp_ext_006",
+      matchType: "platform-id",
+      platformCompanyId: "60006",
+      displayName: "Garlanville Quant",
+      companies: [
+        mkCompany("60006", {
+          id: "co_60061",
+          name: "Garlanville Quantitative",
+          owner: "Avery Stoneford",
+          csm: "Avery Stoneford",
+          aum: 19_000_000_000,
+          url: "https://us.garlanville.com",
+          addr: "300 California Street",
+          city: "San Francisco",
+          state: "CA",
+          postal: "94104",
+          created: "2022-05-14T12:00:00Z",
+          modified: "2026-02-08T08:44:00Z",
+          assoc: a(8, 2, 1, 104),
+          sampleSeed: 9011,
+          firmShort: "Garlanville",
+          extra: {
+            platform_engagement_tier: "Tier 2",
+            relationship_tier_am: "Tier 2",
+            onboarding_complete: "Yes",
+          },
+        }),
+        mkCompany("60006", {
+          id: "co_60062",
+          name: "Garlanville Quant",
+          owner: "Avery Stoneford",
+          aum: 19_000_000_000,
+          url: "https://emea.garlanville.com",
+          addr: "300 California Street",
+          city: "San Francisco",
+          state: "CA",
+          postal: "94104",
+          created: "2024-09-11T10:15:00Z",
+          modified: "2025-07-30T15:02:00Z",
+          assoc: a(3, 1, 0, 18),
+          sampleSeed: 9012,
+          firmShort: "Garlanville",
+        }),
+      ],
+    },
+    // 7. Hawthornelock Wealth — ~70%
+    {
+      id: "grp_ext_007",
+      matchType: "platform-id",
+      platformCompanyId: "60007",
+      displayName: "Hawthornelock Wealth",
+      companies: [
+        mkCompany("60007", {
+          id: "co_60071",
+          name: "Hawthornelock Wealth Partners",
+          owner: "Morgan Thackeray",
+          csm: "Morgan Thackeray",
+          ir: "Morgan Thackeray",
+          aum: 9_500_000_000,
+          url: "https://hawthornelock.com",
+          addr: "12 Heritage Square",
+          city: "Philadelphia",
+          state: "PA",
+          postal: "19103",
+          created: "2023-04-22T14:00:00Z",
+          modified: "2026-01-26T11:55:00Z",
+          assoc: a(5, 2, 1, 72),
+          sampleSeed: 9013,
+          firmShort: "Hawthornelock",
+          extra: {
+            platform_engagement_tier: "Tier 2",
+            relationship_tier_am: "Tier 2",
+            onboarding_complete: "Yes",
+          },
+        }),
+        mkCompany("60007", {
+          id: "co_60072",
+          name: "Hawthornelock WP",
+          owner: "Morgan Thackeray",
+          ir: "Morgan Thackeray",
+          aum: 9_500_000_000,
+          url: "https://hawthornelock-wp.com",
+          addr: "555 Market Street",
+          city: "Philadelphia",
+          state: "PA",
+          postal: "19106",
+          created: "2024-06-19T09:45:00Z",
+          modified: "2025-09-04T10:40:00Z",
+          assoc: a(3, 1, 0, 21),
+          sampleSeed: 9014,
+          firmShort: "Hawthornelock",
+        }),
+      ],
+    },
+    // 8. Inglefell Securities — ~62% (well below threshold)
+    {
+      id: "grp_ext_008",
+      matchType: "platform-id",
+      platformCompanyId: "60008",
+      displayName: "Inglefell Securities",
+      companies: [
+        mkCompany("60008", {
+          id: "co_60081",
+          name: "Inglefell Securities",
+          owner: "Taylor Mendelin",
+          aum: 4_400_000_000,
+          url: "https://inglefell-sec.com",
+          addr: "888 Brickell Avenue",
+          city: "Miami",
+          state: "FL",
+          postal: "33131",
+          created: "2023-08-15T11:30:00Z",
+          modified: "2025-12-30T13:18:00Z",
+          assoc: a(4, 1, 1, 38),
+          sampleSeed: 9015,
+          firmShort: "Inglefell",
+          extra: {
+            platform_engagement_tier: "Tier 3",
+            onboarding_complete: "Yes",
+          },
+        }),
+        mkCompany("60008", {
+          id: "co_60082",
+          name: "Inglefell Capital Markets",
+          owner: "Logan Vespermont",
+          aum: 4_400_000_000,
+          url: "https://inglefell-cm.com",
+          addr: "1 Northbrook Court",
+          city: "Tampa",
+          state: "FL",
+          postal: "33602",
+          created: "2024-12-04T08:20:00Z",
+          modified: "2025-06-13T16:51:00Z",
+          assoc: a(2, 0, 0, 9),
+          sampleSeed: 9016,
+          firmShort: "Inglefell",
+        }),
+      ],
+    },
+  ];
+
+  return groups;
+}
+
+/**
+ * Bulk-generated platform-id collision groups so the review queue feels
+ * portal-scale (100+ pending groups). Each group is deterministic from
+ * its index: confidence varies by signal mix, AUM varies by tier, etc.
+ */
+function buildBulkPlatformIdGroups(count: number): MergeGroup[] {
+  const FIRM_ROOTS = [
+    "Aldwick",
+    "Belforth",
+    "Carrowmore",
+    "Dunsmere",
+    "Estbarrow",
+    "Fieldcrest",
+    "Gravenwood",
+    "Halfton",
+    "Iverleaf",
+    "Junewood",
+    "Kestrelmoor",
+    "Lanforth",
+    "Mossbank",
+    "Nettlewick",
+    "Oakshade",
+    "Penbrook",
+    "Quarrowford",
+    "Ravenstead",
+    "Sablecroft",
+    "Tinderwell",
+    "Underleaf",
+    "Veilcourt",
+    "Wespermount",
+    "Yarrowfield",
+    "Ashforde",
+    "Branwell",
+    "Cresthollow",
+    "Drovedale",
+    "Elmleaf",
+    "Farthorpe",
+    "Gwynfair",
+    "Hartwicket",
+    "Iddesleigh",
+    "Jocelynne",
+    "Kevingham",
+    "Lochmere",
+    "Norhill",
+    "Otterford",
+    "Pentwick",
+    "Quinneford",
+    "Rookhaven",
+    "Stowford",
+    "Thrushdale",
+    "Underwell",
+    "Wynnstead",
+    "Xanderfield",
+    "Zenwick",
+    "Ardenleaf",
+    "Brookgrove",
+    "Catherwell",
+    "Drosdale",
+    "Earlcourt",
+    "Fennimore",
+    "Hartmere",
+    "Inkmoor",
+    "Jasperleaf",
+    "Larkmere",
+    "Marshington",
+    "Pinegate",
+    "Spireholm",
+    "Tideglow",
+    "Umberland",
+    "Vinedale",
+    "Whisperton",
+    "Yardley",
+    "Aldgrove",
+    "Bramblewell",
+    "Cliftonmoor",
+    "Daleshire",
+    "Edenmark",
+    "Fairwynn",
+  ];
+  const SUFFIXES = [
+    "Capital",
+    "Capital Partners",
+    "Asset Management",
+    "Investments",
+    "Wealth Partners",
+    "Holdings",
+    "Strategic",
+    "Advisors",
+    "Group",
+    "Macro Partners",
+    "Quantitative",
+    "Investment Partners",
+  ];
+  const STRATEGIES = [
+    "Multi-Strategy",
+    "Quantitative",
+    "Credit",
+    "Equity Long/Short",
+    "Global Macro",
+    "Fixed Income",
+    "Event-Driven",
+    "Real Assets",
+    "Distressed",
+  ];
+  const CITIES: { city: string; state: string; postal: string }[] = [
+    { city: "New York", state: "NY", postal: "10005" },
+    { city: "New York", state: "NY", postal: "10019" },
+    { city: "Boston", state: "MA", postal: "02110" },
+    { city: "Boston", state: "MA", postal: "02199" },
+    { city: "Chicago", state: "IL", postal: "60606" },
+    { city: "Chicago", state: "IL", postal: "60603" },
+    { city: "San Francisco", state: "CA", postal: "94104" },
+    { city: "San Francisco", state: "CA", postal: "94111" },
+    { city: "Greenwich", state: "CT", postal: "06830" },
+    { city: "Stamford", state: "CT", postal: "06901" },
+    { city: "Miami", state: "FL", postal: "33131" },
+    { city: "Dallas", state: "TX", postal: "75201" },
+    { city: "Los Angeles", state: "CA", postal: "90067" },
+    { city: "Philadelphia", state: "PA", postal: "19103" },
+    { city: "Atlanta", state: "GA", postal: "30326" },
+    { city: "Denver", state: "CO", postal: "80202" },
+  ];
+  const STREETS = [
+    "100 Park Avenue",
+    "200 Liberty Street",
+    "350 Madison Avenue",
+    "55 East Monroe",
+    "1 Federal Street",
+    "888 California Street",
+    "44 Pearl Street",
+    "1500 Market Street",
+    "2 International Place",
+    "601 Lexington",
+    "555 California",
+    "1100 Peachtree",
+    "300 South Tryon",
+    "1450 Brickell",
+    "150 East 42nd Street",
+    "75 State Street",
+  ];
+  const OWNERS = [
+    "Quinn Hartwell",
+    "Casey Brookworth",
+    "Drew Lakemoor",
+    "Riley Whitford",
+    "Sage Pemberford",
+    "Avery Stoneford",
+    "Morgan Thackeray",
+    "Taylor Mendelin",
+    "Logan Vespermont",
+    "Jamie Hollowby",
+  ];
+  const CSMS = [
+    "Drew Lakemoor",
+    "Avery Stoneford",
+    "Casey Brookworth",
+    "Sage Pemberford",
+    "Riley Whitford",
+    "Taylor Mendelin",
+    "Jamie Hollowby",
+    "Logan Vespermont",
+  ];
+  const TIERS = ["Tier 1", "Tier 2", "Tier 3"];
+
+  // Mulberry32 PRNG so each group is deterministic from its index.
+  function rand(seed: number) {
+    let t = (seed + 0x6d2b79f5) | 0;
+    return () => {
+      t = (t + 0x6d2b79f5) | 0;
+      let x = t;
+      x = Math.imul(x ^ (x >>> 15), x | 1);
+      x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+      return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const pick = <T,>(arr: T[], r: () => number) =>
+    arr[Math.floor(r() * arr.length)];
+
+  const groups: MergeGroup[] = [];
+  for (let i = 0; i < count; i++) {
+    const r = rand(70_000 + i * 31);
+    const root = FIRM_ROOTS[i % FIRM_ROOTS.length];
+    const suffixA = pick(SUFFIXES, r);
+    // Variant controls signal strength → confidence band.
+    // 0: same domain + same address + similar names → ~95-100%
+    // 1: same domain + same name + same postal → ~90-95%
+    // 2: same domain + similar names → ~83-88%
+    // 3: same root domain + similar names → ~75-82%
+    // 4: same platform-id only, different domain/address → ~60-70%
+    const variant = i % 5;
+    const fullName = `${root} ${suffixA}`;
+    const altSuffix = pick(
+      SUFFIXES.filter((s) => s !== suffixA),
+      r
+    );
+    const altName =
+      variant === 1
+        ? fullName // identical names → 100% sim component
+        : variant === 0 || variant === 2
+        ? `${root} ${suffixA.split(" ")[0]}` // shortened
+        : variant === 3
+        ? `${root} ${altSuffix}`
+        : `${root} ${altSuffix.split(" ")[0]}`;
+
+    const slug = root.toLowerCase();
+    const baseUrl = `https://${slug}-${variant === 4 ? "ag" : "cap"}.com`;
+    const altUrl =
+      variant === 0 || variant === 1 || variant === 2
+        ? baseUrl
+        : variant === 3
+        ? `https://emea.${slug}-cap.com` // same root, different subdomain
+        : `https://${slug}-grp.com`; // different domain entirely
+
+    const cityA = CITIES[i % CITIES.length];
+    const cityB =
+      variant === 0 || variant === 1
+        ? cityA
+        : variant === 2
+        ? { ...cityA }
+        : variant === 3
+        ? { city: cityA.city, state: cityA.state, postal: cityA.postal }
+        : CITIES[(i + 7) % CITIES.length];
+
+    const streetA = STREETS[i % STREETS.length];
+    const streetB =
+      variant === 0
+        ? streetA
+        : variant === 1
+        ? streetA
+        : variant === 2
+        ? `${parseInt(streetA, 10) + 1} ${streetA.replace(/^\d+\s/, "")}`
+        : STREETS[(i + 3) % STREETS.length];
+
+    const platformId = `7${(1000 + i).toString().padStart(4, "0")}`;
+    const idA = `co_7${(2000 + i * 2).toString().padStart(4, "0")}`;
+    const idB = `co_7${(2001 + i * 2).toString().padStart(4, "0")}`;
+
+    const ownerA = pick(OWNERS, r);
+    const sameOwner = variant <= 2;
+    const ownerB = sameOwner ? ownerA : pick(OWNERS, r);
+    const csm = variant <= 1 ? pick(CSMS, r) : "";
+    const ir = variant === 0 ? ownerA : "No owner";
+
+    // AUM bucket — keep variety in size so the AUM ceiling matters.
+    const aumBucket = i % 7;
+    const baseAum =
+      aumBucket === 0
+        ? 350_000_000_000
+        : aumBucket === 1
+        ? 180_000_000_000
+        : aumBucket === 2
+        ? 96_000_000_000
+        : aumBucket === 3
+        ? 42_000_000_000
+        : aumBucket === 4
+        ? 18_000_000_000
+        : aumBucket === 5
+        ? 8_500_000_000
+        : 3_200_000_000;
+    const aumA = baseAum;
+    const aumB = variant <= 1 ? baseAum : Math.round(baseAum * 0.97);
+
+    const tier = TIERS[Math.min(2, aumBucket < 3 ? 0 : aumBucket < 5 ? 1 : 2)];
+
+    // Activity volume scales with AUM bucket.
+    const activitiesA =
+      aumBucket < 2 ? 240 : aumBucket < 4 ? 160 : aumBucket < 6 ? 90 : 50;
+    const activitiesB = Math.max(8, Math.round(activitiesA * (0.05 + 0.15 * r())));
+
+    const monthsAgoA = 4 + Math.floor(r() * 30);
+    const monthsAgoB = 1 + Math.floor(r() * 12);
+    const isoMonthsAgo = (m: number) => {
+      const d = new Date("2026-04-30T12:00:00Z");
+      d.setUTCMonth(d.getUTCMonth() - m);
+      return d.toISOString();
+    };
+
+    const a = (
+      contacts: number,
+      deals: number,
+      tickets: number,
+      activities: number
+    ) => ({
+      contacts,
+      deals,
+      tickets,
+      activities,
+      notes: Math.round(activities * 0.18),
+      emails: Math.round(activities * 0.5),
+      calls: Math.round(activities * 0.18),
+      meetings: Math.round(activities * 0.07),
+      tasks: Math.round(activities * 0.07),
+    });
+
+    groups.push({
+      id: `grp_bulk_${(i + 1).toString().padStart(3, "0")}`,
+      matchType: "platform-id",
+      platformCompanyId: platformId,
+      displayName: fullName,
+      companies: [
+        mkCompany(platformId, {
+          id: idA,
+          name: fullName,
+          owner: ownerA,
+          csm,
+          ir,
+          aum: aumA,
+          url: baseUrl,
+          addr: streetA,
+          city: cityA.city,
+          state: cityA.state,
+          postal: cityA.postal,
+          created: isoMonthsAgo(monthsAgoA),
+          modified: isoMonthsAgo(2),
+          assoc: a(
+            Math.max(2, Math.round(activitiesA / 16)),
+            Math.max(1, Math.round(activitiesA / 50)),
+            Math.max(0, Math.round(activitiesA / 60)),
+            activitiesA
+          ),
+          sampleSeed: 80_000 + i * 4,
+          firmShort: root,
+          extra: {
+            primary_investment_strategy: pick(STRATEGIES, r),
+            platform_engagement_tier: tier,
+            relationship_tier_am: tier,
+            onboarding_complete: "Yes",
+            renewal_status: variant === 0 ? "Renewed" : "",
+            auto_renew_status: variant === 0 ? "On" : "",
+            northwind_partnership: variant === 0 ? "Yes" : "",
+          },
+        }),
+        mkCompany(platformId, {
+          id: idB,
+          name: altName,
+          owner: ownerB,
+          aum: aumB,
+          url: altUrl,
+          addr: streetB,
+          city: cityB.city,
+          state: cityB.state,
+          postal: cityB.postal,
+          created: isoMonthsAgo(monthsAgoB),
+          modified: isoMonthsAgo(1 + Math.floor(r() * 6)),
+          assoc: a(
+            Math.max(1, Math.round(activitiesB / 8)),
+            Math.max(0, Math.round(activitiesB / 30)),
+            0,
+            activitiesB
+          ),
+          sampleSeed: 80_001 + i * 4,
+          firmShort: root,
+        }),
+      ],
+    });
+  }
+  return groups;
+}
+
 // ---- Platform CompanyID collision groups (sync-breaking) ----
 
 export const PLATFORM_ID_GROUPS: MergeGroup[] = [
@@ -2739,6 +3624,8 @@ export const PLATFORM_ID_GROUPS: MergeGroup[] = [
       },
     ],
   },
+  ...buildExtendedPlatformIdGroups(),
+  ...buildBulkPlatformIdGroups(66),
 ];
 
 // ---- Name match groups (fuzzy match — different / missing Platform CompanyIDs) ----

@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Bot,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Filter,
   Play,
   ShieldAlert,
   Sliders,
+  X,
   XCircle,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -18,7 +21,16 @@ import {
   evaluatePolicy,
   summarizePolicy,
   type AutoMergePolicy,
+  type PolicyEvalResult,
 } from "@/lib/policies";
+import { hasConflict } from "@/lib/diff";
+import {
+  COMPARED_PROPERTIES,
+  PROPERTY_LABELS,
+  formatPropertyValue,
+} from "@/lib/format";
+import { confidenceLabel, getMatchSignals } from "@/lib/match-signals";
+import type { CompanyProperties } from "@/lib/types";
 
 const AUM_OPTIONS = [
   { label: "$10B", value: 10_000_000_000 },
@@ -33,12 +45,38 @@ export default function PoliciesPage() {
   const [policy, setPolicy] = useState<AutoMergePolicy>(DEFAULT_POLICY);
   const [running, setRunning] = useState(false);
   const [lastRun, setLastRun] = useState<{ merged: number } | null>(null);
+  const [inspectIdx, setInspectIdx] = useState<number | null>(null);
+  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
 
   const evaluation = useMemo(
     () => evaluatePolicy(policy, pendingGroups),
     [policy, pendingGroups]
   );
   const summary = useMemo(() => summarizePolicy(evaluation), [evaluation]);
+
+  // ESC to close, arrow keys to step through inspections.
+  useEffect(() => {
+    if (inspectIdx === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setInspectIdx(null);
+      else if (e.key === "ArrowRight") {
+        setInspectIdx((i) =>
+          i === null ? null : Math.min(summary.matched.length - 1, i + 1)
+        );
+      } else if (e.key === "ArrowLeft") {
+        setInspectIdx((i) => (i === null ? null : Math.max(0, i - 1)));
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [inspectIdx, summary.matched.length]);
+
+  const markReviewed = (id: string) =>
+    setReviewedIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
 
   const updatePolicy = (patch: Partial<AutoMergePolicy>) =>
     setPolicy((p) => ({ ...p, ...patch }));
@@ -279,34 +317,45 @@ export default function PoliciesPage() {
                 </div>
               ) : (
                 <ul className="divide-y divide-slate-100">
-                  {summary.matched.slice(0, 20).map((r) => (
-                    <li
-                      key={r.group.id}
-                      className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50/60"
-                    >
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-slate-900 truncate">
-                          {r.group.displayName}
-                        </div>
-                        <div className="text-[11px] text-slate-500">
-                          {r.group.companies.length} records ·{" "}
-                          {r.confidence}% confidence · {r.conflicts} conflicts
-                        </div>
-                      </div>
-                      <Link
-                        href={`/review/${r.group.id}`}
-                        className="text-[11px] text-slate-500 hover:text-slate-900 underline underline-offset-2"
+                  {summary.matched.map((r, i) => {
+                    const reviewed = reviewedIds.has(r.group.id);
+                    return (
+                      <li
+                        key={r.group.id}
+                        className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50/60"
                       >
-                        Inspect
-                      </Link>
-                    </li>
-                  ))}
-                  {summary.matched.length > 20 && (
-                    <li className="px-5 py-2 text-xs text-slate-500 text-center bg-slate-50">
-                      + {summary.matched.length - 20} more
-                    </li>
-                  )}
+                        <CheckCircle2
+                          className={`h-4 w-4 shrink-0 ${
+                            reviewed ? "text-emerald-600" : "text-emerald-500"
+                          }`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-900 truncate flex items-center gap-2">
+                            <span className="truncate">
+                              {r.group.displayName}
+                            </span>
+                            {reviewed && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 px-1.5 py-0.5 rounded">
+                                Reviewed
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            {r.group.companies.length} records ·{" "}
+                            {r.confidence}% confidence · {r.conflicts}{" "}
+                            conflicts
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setInspectIdx(i)}
+                          className="text-[11px] font-medium text-[var(--brand-dark)] hover:text-[var(--brand)] underline underline-offset-2"
+                        >
+                          Inspect
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -328,6 +377,25 @@ export default function PoliciesPage() {
                     ? "Loosen rules until at least one group matches."
                     : "Each match merges the richest record into the survivor; an audit entry is recorded."}
                 </div>
+                {summary.matchedCount > 0 && (
+                  <div className="text-[11px] text-slate-300 mt-2">
+                    Inspected:{" "}
+                    <span className="font-semibold text-white tabular-nums">
+                      {
+                        summary.matched.filter((r) =>
+                          reviewedIds.has(r.group.id)
+                        ).length
+                      }
+                    </span>{" "}
+                    / {summary.matchedCount}
+                    {summary.matched.length > 0 &&
+                      reviewedIds.size === 0 && (
+                        <span className="text-amber-300 ml-2">
+                          · Tip: Inspect each match before bulk merge
+                        </span>
+                      )}
+                  </div>
+                )}
               </div>
               <button
                 onClick={runPolicy}
@@ -356,6 +424,246 @@ export default function PoliciesPage() {
           {!loaded && (
             <div className="text-xs text-slate-400">Loading state…</div>
           )}
+        </div>
+      </div>
+
+      {inspectIdx !== null && summary.matched[inspectIdx] && (
+        <InspectDrawer
+          result={summary.matched[inspectIdx]}
+          index={inspectIdx}
+          total={summary.matched.length}
+          reviewed={reviewedIds.has(summary.matched[inspectIdx].group.id)}
+          onClose={() => setInspectIdx(null)}
+          onPrev={() =>
+            setInspectIdx((i) => (i === null ? null : Math.max(0, i - 1)))
+          }
+          onNext={() =>
+            setInspectIdx((i) =>
+              i === null
+                ? null
+                : Math.min(summary.matched.length - 1, i + 1)
+            )
+          }
+          onMarkReviewed={() => {
+            markReviewed(summary.matched[inspectIdx].group.id);
+            // Auto-advance if there's another to inspect.
+            if (inspectIdx < summary.matched.length - 1) {
+              setInspectIdx(inspectIdx + 1);
+            } else {
+              setInspectIdx(null);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function InspectDrawer({
+  result,
+  index,
+  total,
+  reviewed,
+  onClose,
+  onPrev,
+  onNext,
+  onMarkReviewed,
+}: {
+  result: PolicyEvalResult;
+  index: number;
+  total: number;
+  reviewed: boolean;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onMarkReviewed: () => void;
+}) {
+  const { group, primaryCompanyId, confidence, conflicts } = result;
+  const primary =
+    group.companies.find((c) => c.id === primaryCompanyId) ??
+    group.companies[0];
+  const others = group.companies.filter((c) => c.id !== primary.id);
+  const signals = useMemo(() => getMatchSignals(group), [group]);
+  const conf = confidenceLabel(confidence / 100);
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <button
+        type="button"
+        aria-label="Close inspect"
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+      />
+      <div className="ml-auto h-full w-full max-w-5xl bg-white shadow-2xl border-l border-slate-200 flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-8 w-8 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] text-slate-500 uppercase tracking-wider">
+              Inspect · {index + 1} of {total}
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900 truncate flex items-center gap-2">
+              {group.displayName}
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ring-1 ${conf.color}`}
+              >
+                {confidence}% · {conf.label}
+              </span>
+            </h2>
+            <div className="text-[11px] text-slate-500 mt-0.5">
+              Platform CompanyID{" "}
+              <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">
+                {group.platformCompanyId}
+              </code>{" "}
+              · {group.companies.length} records · {conflicts} conflicts
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onPrev}
+              disabled={index === 0}
+              className="h-8 w-8 rounded-md hover:bg-slate-100 disabled:text-slate-300 disabled:hover:bg-transparent flex items-center justify-center text-slate-500"
+              aria-label="Previous"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onNext}
+              disabled={index === total - 1}
+              className="h-8 w-8 rounded-md hover:bg-slate-100 disabled:text-slate-300 disabled:hover:bg-transparent flex items-center justify-center text-slate-500"
+              aria-label="Next"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Match signals */}
+        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+            Why these are flagged as duplicates
+          </div>
+          <ul className="flex flex-wrap gap-2">
+            {signals.map((s, i) => (
+              <li
+                key={i}
+                className="text-[11px] bg-white border border-slate-200 rounded-md px-2 py-1 flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                <span className="font-medium text-slate-900">{s.label}</span>
+                <span className="text-slate-500">· {s.detail}</span>
+                <span className="font-semibold text-slate-700 tabular-nums">
+                  {Math.round(s.confidence * 100)}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Side-by-side comparison */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            <div className="grid grid-cols-[200px_1fr_1fr] gap-x-4 gap-y-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                Property
+              </div>
+              <div className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Surviving · {primary.id}
+              </div>
+              <div className="text-[11px] font-semibold text-rose-700 flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                Will be merged in · {others.map((o) => o.id).join(", ")}
+              </div>
+            </div>
+            <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
+              {COMPARED_PROPERTIES.map((key) => {
+                const conflict = hasConflict(key, group.companies);
+                const v1 = formatPropertyValue(
+                  key,
+                  primary.properties[key as keyof CompanyProperties]
+                );
+                const otherVals = others.map((o) =>
+                  formatPropertyValue(
+                    key,
+                    o.properties[key as keyof CompanyProperties]
+                  )
+                );
+                return (
+                  <div
+                    key={key}
+                    className={`grid grid-cols-[200px_1fr_1fr] gap-x-4 px-2 py-2 text-sm ${
+                      conflict ? "bg-rose-50/40" : ""
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 self-center">
+                      {PROPERTY_LABELS[key]}
+                      {conflict && (
+                        <span className="ml-1.5 text-rose-600 normal-case font-medium tracking-normal">
+                          · conflict
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-slate-900 break-words">{v1}</div>
+                    <div className="text-slate-700 break-words space-y-1">
+                      {otherVals.map((v, i) => (
+                        <div
+                          key={i}
+                          className={
+                            conflict
+                              ? "text-rose-700 font-medium"
+                              : "text-slate-600"
+                          }
+                        >
+                          {v}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-slate-200 px-6 py-3 flex items-center justify-between bg-white">
+          <div className="text-[11px] text-slate-500">
+            {reviewed ? (
+              <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Reviewed
+              </span>
+            ) : (
+              <>Use ← → to navigate · Esc to close</>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-sm font-medium px-3 py-2 rounded-md text-slate-700 hover:bg-slate-100"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={onMarkReviewed}
+              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-3 py-2 rounded-md shadow"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {index < total - 1 ? "Looks good — next" : "Looks good — done"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
