@@ -492,9 +492,9 @@ function InspectDrawer({
         type="button"
         aria-label="Close inspect"
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        className="absolute inset-0 z-0 bg-slate-900/40 backdrop-blur-sm"
       />
-      <div className="ml-auto h-full w-full max-w-5xl bg-white shadow-2xl border-l border-slate-200 flex flex-col">
+      <div className="relative z-10 ml-auto h-full w-full max-w-5xl bg-white shadow-2xl border-l border-slate-200 flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-3">
           <button
